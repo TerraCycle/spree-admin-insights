@@ -1,7 +1,6 @@
 module SpreeAdminInsights
   class Engine < Rails::Engine
     require 'spree/core'
-    require 'wicked_pdf'
     require 'csv'
 
     isolate_namespace Spree
@@ -21,8 +20,5 @@ module SpreeAdminInsights
     end
 
     config.to_prepare &method(:activate).to_proc
-
-    config.after_initialize do
-    end
   end
 end
