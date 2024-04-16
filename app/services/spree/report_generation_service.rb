@@ -15,7 +15,7 @@ module Spree
     def self.download(report, options = {})
       headers = report.headers
       stats = report.observations
-      ::CSV.generate(options) do |csv|
+      ::CSV.generate(**options) do |csv|
         csv << headers.map { |head| head[:name] }
         stats.each do |record|
           csv << headers.map { |head| record.public_send(head[:value]) }
