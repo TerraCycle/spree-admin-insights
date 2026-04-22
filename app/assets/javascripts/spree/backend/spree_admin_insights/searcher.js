@@ -73,7 +73,7 @@ Searcher.prototype.addSearchStatus = function () {
 Searcher.prototype.addSearchForm = function(data) {
   this.$filters.find('#table-filter').empty().append($(tmpl('search-tmpl', data)));
   this.$filterForm = this.$filters.find('#filter-search');
-  this.$filters.find('.datepicker').datepicker({ dateFormat: 'yy-mm-dd' });
+  flatpickr('.datepicker')
 };
 
 Searcher.prototype.setFormActions = function($form, path) {

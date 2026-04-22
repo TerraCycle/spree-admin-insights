@@ -1,9 +1,0 @@
-<script type="text/x-tmpl" id="paginator-tmpl">
-  {% if(o['total_pages'] > 0) { %}
-    <ul class="pagination pagination-sm center-block">
-      {% for(var i = 0; i <= o['total_pages']; i++) { %}
-        <li class="page-item {%= ((o['current_page'] == i) ? 'active' : '') %}"><a href="{%= o['url'] %}&page={%= i %}" class="pagination-link page-link">{%= i+1 %}</a></li>
-      {% } %}
-    </ul>
-  {% } %}
-</script>

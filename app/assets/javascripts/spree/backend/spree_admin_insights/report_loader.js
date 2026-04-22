@@ -208,6 +208,8 @@ ReportLoader.prototype.populateInitialData = function() {
 };
 
 $(function() {
+  if (!$('#insights-div').length) return;
+
   var inputs = {
     insightsDiv:      $('#report-div'),
     reportsSelectBox: $('#reports'),

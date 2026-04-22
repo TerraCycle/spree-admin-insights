@@ -8,7 +8,7 @@
 
 <div id='insights-div' class='container-fluid' >
   <div class="row">
-    <%= select_tag :reports, options_for_select(@reports.map { |report_name| [ Spree.t(:title, scope: [:insight, report_name]), report_name, data: { url: admin_insight_url(report_name, report_category: params[:report_category]) }] }.unshift(['Select a report', '', data: { url: admin_insights_url(report_category: params[:report_category]) }, disabled: true]), @report_name || ''), class: 'select2' %>
+    <%= select_tag :reports, options_for_select(@reports.map { |report_name| [ Spree.t(:title, scope: [:insight, report_name]), report_name, data: { url: spree.admin_insight_url(report_name, report_category: params[:report_category], locale: params[:locale]) }] }.unshift(['Select a report', '', data: { url: spree.admin_insights_url(report_category: params[:report_category], locale: params[:locale]) }, disabled: true]), @report_name || ''), class: 'select2' %>
   </div>
 </div>
 <%= content_tag(:div, class: 'd-none report-data', data: { report_data: @report_data_json }) {} %>
@@ -55,9 +55,9 @@
           <span class="glyphicon glyphicon-download"></span>
         <% end %>
         <ul class="dropdown-menu">
-          <li><%= link_to 'CSV', admin_insights_download_path(format: 'csv'), class: 'download-link', data: { url: admin_insights_download_path(format: 'csv') } %></li>
-          <li><%= link_to 'Excel', admin_insights_download_path(format: 'xls'), class: 'download-link',  data: { url: admin_insights_download_path(format: 'xls') }%></li>
-          <li><%= link_to 'Text', admin_insights_download_path(format: 'text'), class: 'download-link',  data: { url: admin_insights_download_path(format: 'text') }%></li>
+          <li><%= link_to 'CSV', spree.admin_insights_download_path(format: 'csv'), class: 'download-link', data: { url: spree.admin_insights_download_path(format: 'csv') } %></li>
+          <li><%= link_to 'Excel', spree.admin_insights_download_path(format: 'xls'), class: 'download-link',  data: { url: spree.admin_insights_download_path(format: 'xls') }%></li>
+          <li><%= link_to 'Text', spree.admin_insights_download_path(format: 'text'), class: 'download-link',  data: { url: spree.admin_insights_download_path(format: 'text') }%></li>
         </ul>
       </span>
     <span id="page-selector">
@@ -85,6 +85,139 @@
   </div>
 </div>
 
-<%= render partial: 'spree/admin/templates/insights/show', formats: [:template] %>
-<%= render partial: 'spree/admin/templates/insights/paginator', formats: [:template] %>
-<%= render partial: 'spree/admin/templates/insights/search', formats: [:template] %>
+<script type="text/x-tmpl" id="tmpl">
+  <table class="table admin-insight table-hover" id="admin-insight">
+    <thead>
+      <tr>
+        {% for(var i = 0; i < o['headers'].length; i++) { %}
+          <th>
+            {% if(o['headers'][i].sortable) { %}
+            <a href="{%= o['request_path'] %}?report_category={%= o['report_category'] %}&sort%5Battribute%5D={%= o['headers'][i].value %}&sort%5Btype%5D={%= (o['headers'][i].sorted == 'asc') ? 'desc' : 'asc' %}" class="sortable-link {%= o['headers'][i].sorted %}" data-attribute="{%= o['headers'][i].value %}">{%= o['headers'][i].name %}
+            </a>
+            {% if(o['headers'][i].sorted != undefined) { %}
+              <span class="sortable-arrow {%= (o['headers'][i].sorted == 'asc') ? 'fa fa-chevron-down' : 'fa fa-chevron-up' %}"></span>
+            {% } %}
+            {% } else { %}
+              {%= o['headers'][i].name %}
+            {% } %}
+          </th>
+        {% } %}
+      </tr>
+    </thead>
+    <tbody class='table-data'>
+      {% for(var i = 0; i < o['stats'].length; i++) { %}
+        <tr>
+          {% for(var j = 0; j < o['headers'].length; j++) { %}
+            <td>
+              {% if (o['headers'][j].value == 'profit_loss' || o['headers'][j].value == 'profit_loss_percent') { %}
+                {%= Math.abs(o['stats'][i][o['headers'][j].value] || 0) %}
+                {% if (o['stats'][i][o['headers'][j].value] > 0) { %}
+                  <span class="fa fa-chevron-up profit-indicator"></span>
+                {% } %}
+                {% if (o['stats'][i][o['headers'][j].value] < 0) { %}
+                  <span class="fa fa-chevron-down loss-indicator"></span>
+                {% } %}
+              {% } else if (o['headers'][j].type == 'integer') { %}
+                {%= o['stats'][i][o['headers'][j].value] || 0 %}
+              {% } else { %}
+                {% if (o['deeplink']['deeplinked'] && o['deeplink'][o['headers'][j].value]) { %}
+                  {%# tmpl(o['deeplink'][o['headers'][j].value]['template'], o['stats'][i]) %}
+                {% } else if (o['money']['money'] && o['money'][o['headers'][j].value]) { %}
+                  {%# tmpl(o['money'][o['headers'][j].value]['template'], o['stats'][i]) %}
+                {% } else { %}
+                  {%= o['stats'][i][o['headers'][j].value] || '-' %}
+                {% } %}
+              {% } %}
+            </td>
+          {% } %}
+        </tr>
+      {% } %}
+    </tbody>
+  </table>
+</script>
+
+<script type="text/x-tmpl" id="paginator-tmpl">
+  {% if(o['total_pages'] > 0) { %}
+    <ul class="pagination pagination-sm center-block">
+      {% for(var i = 0; i <= o['total_pages']; i++) { %}
+        <li class="page-item {%= ((o['current_page'] == i) ? 'active' : '') %}"><a href="{%= o['url'] %}&page={%= i %}" class="pagination-link page-link">{%= i+1 %}</a></li>
+      {% } %}
+    </ul>
+  {% } %}
+</script>
+
+<script type="text/x-tmpl" id="search-tmpl">
+  <div data-hook="admin_insights_sidebar">
+    <form id="filter-search" action="{%= o['url'] %}" accept-charset="UTF-8" method="get">
+      <div class="quick_search_form">
+      </div>
+
+      {% if(o['search_attributes']['name']) { %}
+        <div class="row">
+          <div class="col col-md-6">
+            <div data-hook="admin_property_index_search" class="form-group">
+              <label for="search_name">{%= o['search_attributes']['name'] %}</label>
+              <input type="text" name="search[name]" id="search_name" class="form-control js-quick-search-target js-filterable" placeholder="Name">
+            </div>
+          </div>
+        </div>
+      {% } %}
+
+      {% if(o['search_attributes']['email_cont']) { %}
+        <div class="row">
+          <div class="col col-md-6">
+            <div data-hook="admin_property_index_search" class="form-group">
+              <label for="search_email_cont">{%= o['search_attributes']['email_cont'] %}</label>
+              <input type="text" name="search[email_cont]" id="search_email_cont" class="form-control js-quick-search-target js-filterable" placeholder="Email">
+            </div>
+          </div>
+        </div>
+      {% } %}
+
+      {% if(o['search_attributes']['keywords_cont']) { %}
+        <div class="row">
+          <div class="col col-md-6">
+            <div data-hook="admin_property_index_search" class="form-group">
+              <label for="search_keywords_cont">{%= o['search_attributes']['keywords_cont'] %}</label>
+              <input type="text" name="search[keywords_cont]" id="search_keywords_cont" class="form-control js-quick-search-target js-filterable" placeholder="Keyword">
+            </div>
+          </div>
+        </div>
+      {% } %}
+
+      <div class="row">
+        <div class="date-range-filter col-md-8">
+          <div class="form-group">
+            <div class="row no-padding-bottom">
+              <div class="col-md-6">
+                <label for="search_start_date">{%= o['search_attributes']['start_date'] %}</label>
+                <div class="input-group">
+                  <input type="text" name="search[start_date]" id="search_start_date" class="datepicker datepicker-from form-control js-filterable" placeholder="Start">
+                  <span class="input-group-addon">
+                    <i class="icon icon-calendar"></i>
+                  </span>
+                </div>
+
+              </div>
+              <div class="col-md-6">
+                <label for="search_end_date">{%= o['search_attributes']['end_date'] %}</label>
+                <div class="input-group">
+                  <input type="text" name="search[end_date]" id="search_end_date" class="datepicker datepicker-to form-control js-filterable" placeholder="Stop">
+                  <span class="input-group-addon">
+                    <i class="icon icon-calendar"></i>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="form-actions" data-hook="admin_insights_index_search_buttons">
+        <button name="button" type="submit" class="btn btn-primary "><span class="icon icon-search"></span> Search</button>
+      </div>
+
+    </form>
+  </div>
+</script>
